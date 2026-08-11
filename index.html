@@ -59,18 +59,8 @@
 (function(){
   "use strict";
 
-  /* ============================================================
-     SETUP — fill these two in, then redeploy.
-     1. In your Google Sheet: Share → General access →
-        "Anyone with the link" → Viewer.
-     2. Copy the SHEET ID from the sheet's URL:
-        docs.google.com/spreadsheets/d/THIS_LONG_ID/edit
-     3. SHEET_TAB is the tab name at the bottom (e.g. "Bins").
-     Sheet columns (first row = headers, any order):
-        Bin | Location | Item      ← one row per item
-     Add stock = add a row. Remove = delete a row.
-     ============================================================ */
-  const SHEET_ID  = "https://docs.google.com/spreadsheets/d/1b2oPvjjan2DZFLrQOktjolVlYqqjzBuNLhtVvBUcsKY/edit?usp=sharing";          // <-- paste your sheet ID between the quotes
+
+  const SHEET_ID  = "1b2oPvjjan2DZFLrQOktjolVlYqqjzBuNLhtVvBUcsKY";          // <-- paste your sheet ID between the quotes
   const SHEET_TAB = "BINS";      // <-- your tab name
 
   const stage=document.getElementById("stage");
