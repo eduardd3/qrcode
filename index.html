@@ -2425,8 +2425,8 @@ window.QRCode = {
         Bin | Location | Item      ← one row per item
      Add stock = add a row. Remove = delete a row.
      ============================================================ */
-  const SHEET_ID  = "1b2oPvjjan2DZFLrQOktjolVlYqqjzBuNLhtVvBUcsKY";          // <-- paste your sheet ID between the quotes
-  const SHEET_TAB = "BINS";      // <-- your tab name
+  const SHEET_ID  = "";          // <-- paste your sheet ID between the quotes
+  const SHEET_TAB = "Bins";      // <-- your tab name
 
   const stage=document.getElementById("stage");
   const params=new URLSearchParams(location.search);
@@ -2488,14 +2488,49 @@ window.QRCode = {
   function labelURLfor(b){
     return location.origin+location.pathname+"?bin="+encodeURIComponent(b.id);
   }
+
+  /* save a canvas image in a way that works on phones (share sheet) and desktop (download) */
+  async function saveCanvasImage(canvas, filename){
+    const blob = await new Promise(res=>canvas.toBlob(res,"image/png"));
+    if(!blob){ window.open(canvas.toDataURL("image/png"),"_blank"); return; }
+    const file = new File([blob], filename, {type:"image/png"});
+    // phones: hand it to the OS share sheet → Save to Photos / Files
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file]}); return; }
+      catch(e){ if(e && e.name==="AbortError") return; }
+    }
+    // desktop: normal download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href=url; a.download=filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+  }
+
   function downloadQR(b){
     if(!(window.QRCode&&QRCode.toCanvas))return;
     const c=document.createElement("canvas");
-    QRCode.toCanvas(c,labelURLfor(b),{width:600,margin:2,color:{dark:"#000000",light:"#ffffff"}},err=>{
-      if(err)return;
-      const a=document.createElement("a");a.href=c.toDataURL("image/png");
-      a.download="bin-"+b.id+".png";document.body.appendChild(a);a.click();a.remove();
+    QRCode.toCanvas(c,labelURLfor(b),{width:600,margin:2,color:{dark:"#000000",light:"#ffffff"}});
+    saveCanvasImage(c,"bin-"+b.id+".png");
+  }
+
+  /* all bins as one printable label sheet = one file, one tap */
+  function buildSheet(bins){
+    const cell=260,qr=210,cols=Math.min(3,bins.length)||1;
+    const rows=Math.ceil(bins.length/cols);
+    const cv=document.createElement("canvas");
+    cv.width=cols*cell; cv.height=rows*cell;
+    const ctx=cv.getContext("2d");
+    ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height);
+    bins.forEach((b,i)=>{
+      const cx=(i%cols)*cell, cy=Math.floor(i/cols)*cell;
+      const t=document.createElement("canvas");
+      QRCode.toCanvas(t,labelURLfor(b),{width:qr,margin:1,color:{dark:"#000000",light:"#ffffff"}});
+      ctx.drawImage(t, cx+(cell-t.width)/2, cy+20);
+      ctx.fillStyle="#000"; ctx.font="bold 22px monospace"; ctx.textAlign="center";
+      ctx.fillText(b.id, cx+cell/2, cy+cell-18);
     });
+    return cv;
   }
 
   function renderBin(b){
@@ -2547,8 +2582,9 @@ window.QRCode = {
       </div>`;
     document.getElementById("reload").onclick=()=>load();
     const sa=document.getElementById("saveall");
-    if(sa)sa.onclick=async()=>{
-      for(const b of bins){downloadQR(b);await new Promise(r=>setTimeout(r,300));}
+    if(sa)sa.onclick=()=>{
+      if(!(window.QRCode&&QRCode.toCanvas))return;
+      saveCanvasImage(buildSheet(bins),"bin-labels.png");
     };
   }
 
