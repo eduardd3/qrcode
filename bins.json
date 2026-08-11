@@ -1,0 +1,19 @@
+{
+  "bins": [
+    {
+      "id": "A3",
+      "loc": "Shelf 2, garage",
+      "items": ["12× lavender candle 4oz", "8× canvas tote", "devotional prints — St. Jude"]
+    },
+    {
+      "id": "B1",
+      "loc": "Closet, top",
+      "items": ["rosary bundles (assorted)", "24× kraft gift boxes", "twine spool ×2"]
+    },
+    {
+      "id": "C7",
+      "loc": "Under bench",
+      "items": ["jewelry — gold-plated studs", "polishing cloths", "poly mailers 6x9"]
+    }
+  ]
+}
