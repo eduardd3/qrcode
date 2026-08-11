@@ -24,6 +24,7 @@
   .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--kraft);text-align:center;margin-top:12px;}
   .bin-id{font-family:var(--mono);font-size:44px;font-weight:600;letter-spacing:.04em;text-align:center;margin:2px 0 2px;text-transform:uppercase;line-height:1.05;}
   .bin-loc{text-align:center;font-family:var(--mono);font-size:13px;color:var(--ink-soft);letter-spacing:.03em;margin-bottom:20px;min-height:16px;}
+  .bin-desc{text-align:center;font-size:14px;color:var(--ink-soft);line-height:1.5;margin:-8px 0 20px;padding:0 4px;font-style:italic;}
   ul.items{list-style:none;margin:0;padding:0;border-top:1px dashed var(--line)}
   ul.items li{display:flex;align-items:baseline;gap:12px;padding:13px 4px;border-bottom:1px dashed var(--line);font-size:16px;}
   ul.items li .dot{flex:none;width:7px;height:7px;border-radius:50%;background:var(--pine);transform:translateY(-2px);}
@@ -31,10 +32,15 @@
 
   h1.index-title{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.01em;margin:6px 0 2px;text-align:center;}
   .index-sub{text-align:center;color:var(--ink-soft);font-size:13px;margin:0 0 18px}
-  a.bin-link{display:flex;justify-content:space-between;align-items:center;text-decoration:none;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 18px;margin-bottom:10px;transition:.15s;}
+  a.bin-link{display:flex;justify-content:space-between;align-items:flex-start;text-decoration:none;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 18px;margin-bottom:10px;transition:.15s;gap:12px;}
   a.bin-link:hover{border-color:var(--ink)}
-  a.bin-link .bl-id{font-family:var(--mono);font-weight:600;font-size:16px;letter-spacing:.05em}
-  a.bin-link .bl-n{font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
+  a.bin-link .bl-id{font-family:var(--mono);font-weight:600;font-size:16px;letter-spacing:.05em;display:block}
+  a.bin-link .bl-n{font-family:var(--mono);font-size:12px;color:var(--ink-soft);white-space:nowrap;padding-top:2px}
+  .search{width:100%;font-family:var(--sans);font-size:15px;color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--card);margin-bottom:14px;-webkit-appearance:none;}
+  .search:focus{outline:none;border-color:var(--pine)}
+  .hit-items{margin-top:6px;font-size:13px;color:var(--ink-soft);line-height:1.5}
+  .hit-items div{padding:1px 0}
+  mark{background:#FBE7A1;color:inherit;border-radius:3px;padding:0 2px}
 
   .note{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:26px 22px;text-align:center;margin-top:14px;}
   .note .big{font-family:var(--mono);font-size:17px;font-weight:600;margin-bottom:8px}
@@ -2422,8 +2428,9 @@ window.QRCode = {
         docs.google.com/spreadsheets/d/THIS_LONG_ID/edit
      3. SHEET_TAB is the tab name at the bottom (e.g. "Bins").
      Sheet columns (first row = headers, any order):
-        Bin | Location | Item      ← one row per item
-     Add stock = add a row. Remove = delete a row.
+        Bin | Location | Description | Item   ← one row per item
+     Location and Description are per-bin (fill on any one row).
+     Description is a short note about the bin (optional).
      ============================================================ */
   const SHEET_ID  = "1b2oPvjjan2DZFLrQOktjolVlYqqjzBuNLhtVvBUcsKY";          // <-- paste your sheet ID between the quotes
   const SHEET_TAB = "BINS";      // <-- your tab name
@@ -2431,6 +2438,7 @@ window.QRCode = {
   const stage=document.getElementById("stage");
   const params=new URLSearchParams(location.search);
   const wanted=(params.get("bin")||"").trim().toUpperCase();
+  let lastBins=[];
 
   function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 
@@ -2467,15 +2475,18 @@ window.QRCode = {
     const iBin=colIndex(header,["bin","bin id","binid","id"]);
     const iItem=colIndex(header,["item","items","contents","content"]);
     const iLoc=colIndex(header,["location","loc","where","shelf"]);
+    const iDesc=colIndex(header,["description","desc","note","notes","about"]);
     if(iBin<0)return {error:"nobincol"};
     const map=new Map();
     for(const r of rows){
       const id=(r[iBin]||"").trim();if(!id)continue;
       const key=id.toUpperCase();
-      if(!map.has(key))map.set(key,{id,loc:"",items:[]});
+      if(!map.has(key))map.set(key,{id,loc:"",desc:"",items:[]});
       const b=map.get(key);
       const loc=iLoc>=0?(r[iLoc]||"").trim():"";
       if(loc&&!b.loc)b.loc=loc;
+      const desc=iDesc>=0?(r[iDesc]||"").trim():"";
+      if(desc&&!b.desc)b.desc=desc;
       const cell=iItem>=0?(r[iItem]||"").trim():"";
       if(cell){
         if(/[\n;]/.test(cell))cell.split(/[\n;]+/).map(s=>s.trim()).filter(Boolean).forEach(x=>b.items.push(x));
@@ -2543,6 +2554,7 @@ window.QRCode = {
         <div class="eyebrow">Bin contents</div>
         <div class="bin-id">${esc(b.id)}</div>
         <div class="bin-loc">${b.loc?esc(b.loc):""}</div>
+        ${b.desc?`<div class="bin-desc">${esc(b.desc)}</div>`:""}
         ${list}
       </div>
       <div class="tag label-card">
@@ -2555,7 +2567,7 @@ window.QRCode = {
         </div>
       </div>
       <div class="refresh"><button id="reload">↻ Refresh</button></div>
-      <footer><a id="all">See all bins →</a></footer>`;
+      <footer><a id="all">Search all bins →</a></footer>`;
     if(window.QRCode&&QRCode.toCanvas){
       QRCode.toCanvas(document.getElementById("binqr"),labelURLfor(b),{width:200,margin:2,color:{dark:"#17160F",light:"#ffffff"}});
     }
@@ -2565,26 +2577,60 @@ window.QRCode = {
     document.getElementById("all").onclick=()=>{location.href=location.pathname;};
   }
 
-  function renderIndex(bins){
-    const rows=bins.map(b=>{
+  function highlight(text,q){
+    const s=String(text);
+    if(!q)return esc(s);
+    const i=s.toLowerCase().indexOf(q.toLowerCase());
+    if(i<0)return esc(s);
+    return esc(s.slice(0,i))+"<mark>"+esc(s.slice(i,i+q.length))+"</mark>"+esc(s.slice(i+q.length));
+  }
+  function filterBins(bins,q){
+    q=q.trim().toLowerCase();
+    if(!q)return bins.map(b=>({b,hits:[]}));
+    const out=[];
+    for(const b of bins){
+      const meta=(b.id+" "+(b.loc||"")+" "+(b.desc||"")).toLowerCase().includes(q);
+      const hits=(b.items||[]).filter(it=>it.toLowerCase().includes(q));
+      if(meta||hits.length)out.push({b,hits});
+    }
+    return out;
+  }
+  function resultsHTML(list,q){
+    if(!list.length){
+      return q ? '<div class="note"><p>Nothing matches “'+esc(q)+'”.</p></div>'
+               : '<div class="note"><p>No bins in the sheet yet. Add a row with a Bin and an Item.</p></div>';
+    }
+    return list.map(({b,hits})=>{
       const n=(b.items||[]).length;
+      const sub=hits.length?'<div class="hit-items">'+hits.map(h=>"<div>"+highlight(h,q)+"</div>").join("")+'</div>':'';
       return `<a class="bin-link" href="${location.pathname}?bin=${encodeURIComponent(b.id)}">
-        <span class="bl-id">${esc(b.id)}</span>
+        <span style="flex:1;min-width:0"><span class="bl-id">${highlight(b.id,q)}</span>${sub}</span>
         <span class="bl-n">${n} item${n===1?"":"s"}${b.loc?" · "+esc(b.loc):""}</span></a>`;
     }).join("");
+  }
+
+  function renderIndex(bins){
+    lastBins=bins;
+    const preset=params.get("q")||"";
     stage.innerHTML=`
       <h1 class="index-title">All bins</h1>
-      <p class="index-sub">${bins.length} tracked · scan a label to jump to one</p>
-      ${rows||'<div class="note"><p>No bins in the sheet yet. Add a row with a Bin and an Item.</p></div>'}
+      <p class="index-sub">${bins.length} tracked · search an item or scan a label</p>
+      <input id="q" class="search" placeholder="Find an item, bin, or note…" value="${esc(preset)}" autocomplete="off" autocapitalize="none">
+      <div id="results"></div>
       <div class="refresh" style="display:flex;gap:8px;justify-content:center">
         <button id="reload">↻ Refresh</button>
         ${bins.length?'<button id="saveall">Save all labels (PNG)</button>':''}
       </div>`;
+    const q=document.getElementById("q"),results=document.getElementById("results");
+    function update(){results.innerHTML=resultsHTML(filterBins(lastBins,q.value),q.value.trim());}
+    q.oninput=update;
+    update();
+    if(preset)q.focus();
     document.getElementById("reload").onclick=()=>load();
     const sa=document.getElementById("saveall");
     if(sa)sa.onclick=()=>{
       if(!(window.QRCode&&QRCode.toCanvas))return;
-      saveCanvasImage(buildSheet(bins),"bin-labels.png");
+      saveCanvasImage(buildSheet(lastBins),"bin-labels.png");
     };
   }
 
@@ -2595,7 +2641,7 @@ window.QRCode = {
         <p>This label points to a bin that isn't in the sheet. Add a row with <code>${esc(wanted)}</code> in the Bin column, then tap refresh.</p>
       </div>
       <div class="refresh"><button id="reload">↻ Refresh</button></div>
-      <footer><a id="all">See all bins →</a></footer>`;
+      <footer><a id="all">Search all bins →</a></footer>`;
     document.getElementById("reload").onclick=()=>load();
     document.getElementById("all").onclick=()=>{location.href=location.pathname;};
   }
