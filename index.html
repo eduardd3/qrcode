@@ -2613,7 +2613,7 @@ window.QRCode = {
     lastBins=bins;
     const preset=params.get("q")||"";
     stage.innerHTML=`
-      <h1 class="index-title">All bins</h1>
+      <h1 class="index-title">Inventory</h1>
       <p class="index-sub">${bins.length} tracked · search an item or scan a label</p>
       <input id="q" class="search" placeholder="Find an item, bin, or note…" value="${esc(preset)}" autocomplete="off" autocapitalize="none">
       <div id="results"></div>
